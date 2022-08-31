@@ -2,8 +2,12 @@ const obj = { isOk: true, text: 'Hello', incream: 0 };
 
 const depsSet = new Set()
 
-let effect = () => {
-  document.querySelector('#app').innerText = proxyObj.text
+let effect = null
+
+function registerEffect(fn) {
+  if (!effect) effect = fn
+
+  effect()
 }
 
 const proxyObj = new Proxy(obj, {
@@ -18,4 +22,6 @@ const proxyObj = new Proxy(obj, {
   }
 })
 
-effect()
+registerEffect(() => {
+  document.getElementById('app').innerText = proxyObj.text
+})
