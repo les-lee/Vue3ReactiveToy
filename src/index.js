@@ -10,7 +10,7 @@ function clearup(deps, effectFn) {
   })
 }
 
-function registerEffect(fn) {
+function registerEffect(fn, options) {
   const effectFn = () => {
     clearup(effectFn.deps, effectFn)
     effect = effectFn
@@ -20,6 +20,7 @@ function registerEffect(fn) {
     effect = effectStack[effectStack.length - 1]
   }
   effectFn.deps = []
+  effectFn.options = options
   effectFn()
 }
 
@@ -40,7 +41,10 @@ function trigger(target, prop) {
   let depsTraces = depsKeys.get(prop)
   if (!depsTraces) return
   new Set(depsTraces).forEach(fn => {
-    if (effect !== fn) fn()
+    if (effect !== fn) {
+      if (fn.options.scheduler) fn.options.scheduler(fn)
+      else fn()
+    }
   });
 }
 
@@ -56,10 +60,35 @@ const proxyObj = new Proxy(obj, {
   }
 })
 
+function asyncScheduler(fn) {
+  Promise.resolve().then(fn)
+}
+
+const flushScheduler = (function () {
+  let flushing = false
+  let flushingQueue = new Set()
+  return (fn) => {
+    if (flushing) {
+      flushingQueue.add(fn)
+    } else {
+      flushing = true
+      Promise.resolve().then(() => {
+        flushingQueue.forEach(fn => fn())
+      }).finally(() => flushing = false)
+    }
+  }
+})()
+
 registerEffect(() => {
   console.log('commit 1')
-  registerEffect(() => {
-    console.log('commit 2')
-  })
-  proxyObj.incream++
+  proxyObj.incream
+}, {
+  scheduler: flushScheduler
 })
+
+proxyObj.incream++
+proxyObj.incream++
+proxyObj.incream++
+proxyObj.incream++
+proxyObj.incream++
+console.log('commit 2');
