@@ -10,14 +10,15 @@ function clearup(deps, effectFn) {
   })
 }
 
-function registerEffect(fn, options) {
+function registerEffect(fn, options = {}) {
   const effectFn = () => {
     clearup(effectFn.deps, effectFn)
     effect = effectFn
     effectStack.push(effect)
-    fn()
+    const res = fn()
     effectStack.pop()
     effect = effectStack[effectStack.length - 1]
+    return res
   }
   effectFn.deps = []
   effectFn.options = options
@@ -65,6 +66,21 @@ function asyncScheduler(fn) {
   Promise.resolve().then(fn)
 }
 
+function computed(getter) {
+
+
+  const effectFn = registerEffect(getter, {
+    lazy: true,
+  })
+
+  const result = {
+    get value() {
+      return effectFn()
+    }
+  }
+  return result
+}
+
 const flushScheduler = (function () {
   let flushing = false
   let flushingQueue = new Set()
@@ -80,9 +96,8 @@ const flushScheduler = (function () {
   }
 })()
 
-const effectFn = registerEffect(() => {
-  console.log('commit 1')
-  proxyObj.incream
-}, {
-  lazy: true
+const currentComputed = computed(() => proxyObj.text + proxyObj.incream)
+
+registerEffect(() => {
+  console.log(currentComputed.value)
 })
