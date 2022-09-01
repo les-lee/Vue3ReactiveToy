@@ -40,8 +40,7 @@ function trigger(target, prop) {
   let depsTraces = depsKeys.get(prop)
   if (!depsTraces) return
   new Set(depsTraces).forEach(fn => {
-    // TODO:
-    fn()
+    if (effect !== fn) fn()
   });
 }
 
