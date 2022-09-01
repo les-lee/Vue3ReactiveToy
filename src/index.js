@@ -4,11 +4,19 @@ const depsTree = new WeakMap()
 
 let effect = null
 
+function clearup (deps, effectFn) {
+  deps.forEach(dep => {
+    dep.delete(effectFn)
+  })
+}
+
 function registerEffect(fn) {
   const effectFn = () => {
+    clearup(effectFn.deps, effectFn)
     effect = effectFn
     fn()
   }
+  effectFn.deps = []
   effectFn()
 }
 
@@ -19,6 +27,7 @@ function trace(target, prop) {
   if (!depsTraces) depsKeys.set(prop, depsTraces = new Set())
   if (effect) {
     depsTraces.add(effect)
+    effect.deps.push(depsTraces)
   }
 }
 
@@ -27,6 +36,7 @@ function trigger(target, prop) {
   if (!depsKeys) return
   let depsTraces = depsKeys.get(prop)
   if (!depsTraces) return
+  // TODO
   depsTraces.forEach(fn => fn());
 }
 
