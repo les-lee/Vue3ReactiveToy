@@ -1,27 +1,48 @@
 const obj = { isOk: true, text: 'Hello', incream: 0 };
 
-const depsSet = new Set()
+const depsTree = new WeakMap()
 
 let effect = null
 
 function registerEffect(fn) {
-  if (!effect) effect = fn
+  const effectFn = () => {
+    effect = effectFn
+    fn()
+  }
+  effectFn()
+}
 
-  effect()
+function trace(target, prop) {
+  let depsKeys = depsTree.get(target)
+  if (!depsKeys) depsTree.set(target, depsKeys = new Map())
+  let depsTraces = depsKeys.get(prop)
+  if (!depsTraces) depsKeys.set(prop, depsTraces = new Set())
+  if (effect) {
+    depsTraces.add(effect)
+  }
+}
+
+function trigger(target, prop) {
+  let depsKeys = depsTree.get(target)
+  if (!depsKeys) return
+  let depsTraces = depsKeys.get(prop)
+  if (!depsTraces) return
+  depsTraces.forEach(fn => fn());
 }
 
 const proxyObj = new Proxy(obj, {
   get(target, prop) {
-    if (effect) depsSet.add(effect)
+    trace(target, prop)
     return target[prop];
   },
   set(target, prop, value) {
     target[prop] = value
-    depsSet.forEach(fn => fn())
+    trigger(target, prop)
     return true
   }
 })
 
 registerEffect(() => {
-  document.getElementById('app').innerText = proxyObj.text
+  console.log('commit 1')
+  document.getElementById('app').innerText = proxyObj.isOk && proxyObj.text
 })
