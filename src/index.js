@@ -21,7 +21,8 @@ function registerEffect(fn, options) {
   }
   effectFn.deps = []
   effectFn.options = options
-  effectFn()
+  if (!options.lazy) effectFn()
+  return effectFn
 }
 
 function trace(target, prop) {
@@ -79,16 +80,9 @@ const flushScheduler = (function () {
   }
 })()
 
-registerEffect(() => {
+const effectFn = registerEffect(() => {
   console.log('commit 1')
   proxyObj.incream
 }, {
-  scheduler: flushScheduler
+  lazy: true
 })
-
-proxyObj.incream++
-proxyObj.incream++
-proxyObj.incream++
-proxyObj.incream++
-proxyObj.incream++
-console.log('commit 2');
