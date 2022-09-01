@@ -3,8 +3,9 @@ const obj = { isOk: true, text: 'Hello', incream: 0 };
 const depsTree = new WeakMap()
 
 let effect = null
+// TODO:
 
-function clearup (deps, effectFn) {
+function clearup(deps, effectFn) {
   deps.forEach(dep => {
     dep.delete(effectFn)
   })
@@ -27,7 +28,6 @@ function trace(target, prop) {
   if (!depsTraces) depsKeys.set(prop, depsTraces = new Set())
   if (effect) {
     depsTraces.add(effect)
-    effect.deps.push(depsTraces)
   }
 }
 
@@ -36,8 +36,7 @@ function trigger(target, prop) {
   if (!depsKeys) return
   let depsTraces = depsKeys.get(prop)
   if (!depsTraces) return
-  // TODO
-  depsTraces.forEach(fn => fn());
+  new Set(depsTraces).forEach(fn => fn());
 }
 
 const proxyObj = new Proxy(obj, {
@@ -54,5 +53,8 @@ const proxyObj = new Proxy(obj, {
 
 registerEffect(() => {
   console.log('commit 1')
-  document.getElementById('app').innerText = proxyObj.isOk && proxyObj.text
+  registerEffect(() => {
+    console.log('commit 2')
+  })
+  proxyObj.incream
 })
