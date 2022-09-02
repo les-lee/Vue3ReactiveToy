@@ -123,14 +123,15 @@ function traverse(target) {
 function watch(getter, callback) {
   let getterFn = typeof getter === 'function' ? getter : () => traverse(getter)
   let oldValue
-  registerEffect(() => getterFn(), {
+  const effectFn = registerEffect(() => getterFn(), {
+    lazy: true,
     scheduler: fn => {
       const newValue = fn()
       callback(oldValue, newValue)
       oldValue = newValue
     }
   })
-
+  oldValue = effectFn()
 }
 
 watch(() => proxyObj.text + proxyObj.incream, (nv, ov) => {
