@@ -51,6 +51,8 @@ function trigger(target, prop) {
   });
 }
 
+
+
 const proxyObj = new Proxy(obj, {
   get(target, prop) {
     trace(target, prop)
@@ -66,6 +68,22 @@ const proxyObj = new Proxy(obj, {
 function asyncScheduler(fn) {
   Promise.resolve().then(fn)
 }
+
+const flushScheduler = (function () {
+  let flushing = false
+  let flushingQueue = new Set()
+  return (fn) => {
+    if (flushing) {
+      flushingQueue.add(fn)
+    } else {
+      flushing = true
+      Promise.resolve().then(() => {
+        flushingQueue.forEach(fn => fn())
+      }).finally(() => flushing = false)
+    }
+  }
+})()
+
 
 function computed(getter) {
 
@@ -95,26 +113,25 @@ function computed(getter) {
   return result
 }
 
-const flushScheduler = (function () {
-  let flushing = false
-  let flushingQueue = new Set()
-  return (fn) => {
-    if (flushing) {
-      flushingQueue.add(fn)
-    } else {
-      flushing = true
-      Promise.resolve().then(() => {
-        flushingQueue.forEach(fn => fn())
-      }).finally(() => flushing = false)
-    }
+function traverse(target) {
+  if (['', null, undefined].includes(target) || typeof target !== 'object') return
+  for (const key in target) {
+    traverse(target[key])
   }
-})()
+}
 
-const currentComputed = computed(() => {
-  console.log('commit 1');
-  return proxyObj.text + proxyObj.incream
-})
+function watch(target, callback) {
 
-registerEffect(() => {
-  console.log(currentComputed.value)
+  registerEffect(() => {
+    traverse(target)
+  }, {
+    scheduler: fn => {
+      callback()
+    }
+  })
+
+}
+
+watch(proxyObj, () => {
+  console.log('commit 1')
 })
