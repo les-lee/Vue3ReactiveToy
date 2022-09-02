@@ -120,18 +120,19 @@ function traverse(target) {
   }
 }
 
-function watch(target, callback) {
-
-  registerEffect(() => {
-    traverse(target)
-  }, {
+function watch(getter, callback) {
+  let getterFn = typeof getter === 'function' ? getter : () => traverse(getter)
+  let oldValue
+  registerEffect(() => getterFn(), {
     scheduler: fn => {
-      callback()
+      const newValue = fn()
+      callback(oldValue, newValue)
+      oldValue = newValue
     }
   })
 
 }
 
-watch(proxyObj, () => {
-  console.log('commit 1')
+watch(() => proxyObj.text + proxyObj.incream, (nv, ov) => {
+  console.log('commit 1', nv, ov)
 })
