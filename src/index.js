@@ -123,9 +123,14 @@ function traverse(target) {
 function watch(getter, callback, options = {}) {
   let getterFn = typeof getter === 'function' ? getter : () => traverse(getter)
   let oldValue
+  let invalidate
+  function onInvalidate(fn) {
+    invalidate = fn
+  }
   function iCallback() {
     const newValue = effectFn()
-    callback(oldValue, newValue)
+    if (invalidate) invalidate()
+    callback(oldValue, newValue, onInvalidate)
     oldValue = newValue
   }
   const effectFn = registerEffect(() => getterFn(), {
@@ -136,8 +141,14 @@ function watch(getter, callback, options = {}) {
   else oldValue = effectFn()
 }
 
-watch(() => proxyObj.text + proxyObj.incream, (nv, ov) => {
-  console.log('commit 1', nv, ov)
+watch(() => proxyObj.text + proxyObj.incream, (nv, ov, onInvalidate) => {
+  const ignore = false
+  onInvalidate(() => {
+    ignore = true
+  })
+  if (ignore) {
+    console.log('commit 1', nv, ov)
+  }
 }, {
   immediately: true
 })
