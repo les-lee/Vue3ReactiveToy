@@ -120,20 +120,24 @@ function traverse(target) {
   }
 }
 
-function watch(getter, callback) {
+function watch(getter, callback, options = {}) {
   let getterFn = typeof getter === 'function' ? getter : () => traverse(getter)
   let oldValue
+  function iCallback() {
+    const newValue = effectFn()
+    callback(oldValue, newValue)
+    oldValue = newValue
+  }
   const effectFn = registerEffect(() => getterFn(), {
     lazy: true,
-    scheduler: fn => {
-      const newValue = fn()
-      callback(oldValue, newValue)
-      oldValue = newValue
-    }
+    scheduler: iCallback
   })
-  oldValue = effectFn()
+  if (options.immediately) iCallback()
+  else oldValue = effectFn()
 }
 
 watch(() => proxyObj.text + proxyObj.incream, (nv, ov) => {
   console.log('commit 1', nv, ov)
+}, {
+  immediately: true
 })
